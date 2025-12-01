@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Velocidad Doble V1 - Web</title>
+    <style>
+        /* --- Estilos para que se vea bien en el celular --- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Evita que aparezcan barras de desplazamiento */
+            background-color: #000000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            user-select: none; /* Evita que se seleccione el texto al tocar */
+        }
+
+        .gps-speed-label {
+            color: #00FF00; /* Verde brillante */
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .gps-speed {
+            color: #FFFFFF;
+            font-size: 80px;
+            font-weight: 300;
+            line-height: 1;
+        }
+
+        .accel-speed-label {
+            color: #FFA500; /* Naranja */
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .accel-speed {
+            color: #FFFFFF;
+            font-size: 60px;
+            font-weight: 300;
+            line-height: 1;
+        }
+
+        .unit {
+            color: #CCCCCC;
+            font-size: 20px;
+            margin-top: 5px;
+            margin-bottom: 20px;
+        }
+
+        .divider {
+            height: 2px;
+            background-color: #333333;
+            width: 80%;
+            margin: 20px 0;
+            border: 0;
+        }
+
+        .status {
+            color: #AAAAAA;
+            font-size: 16px;
+            position: absolute;
+            bottom: 40px;
+        }
+
+        .error {
+            color: #FF4136; /* Rojo para errores */
+            font-size: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Velocidad GPS -->
+        <div class="gps-section">
+            <p class="gps-speed-label">GPS</p>
+            <p class="gps-speed" id="gps-speed">0.0</p>
+            <p class="unit">KM/H</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Velocidad por Acelerómetro -->
+        <div class="accel-section">
+            <p class="accel-speed-label">CALCULADA</p>
+            <p class="accel-speed" id="accel-speed">0.0</p>
+            <p class="unit">KM/H</p>
+        </div>
+        
+        <!-- Indicador de estado del GPS -->
+        <p class="status" id="gps-status">Solicitando permisos...</p>
+    </div>
+
+    <script>
+        // --- Referencias a los elementos de la página ---
+        const gpsSpeedElement = document.getElementById('gps-speed');
+        const accelSpeedElement = document.getElementById('accel-speed');
+        const gpsStatusElement = document.getElementById('gps-status');
+
+        // --- Variables para el cálculo ---
+        let calculatedSpeed = 0;
+        let lastTimestamp = Date.now();
+
+        // --- LÓGICA PARA EL GPS (usando la API del navegador) ---
+        if ('geolocation' in navigator) {
+            // Opciones de alta precisión para el GPS
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            };
+
+            // watchPosition llama a la función de éxito cada vez que hay una nueva lectura
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    // La velocidad viene en metros/segundo. La convertimos a km/h
+                    // position.coords.speed puede ser null si estás quieto
+                    const speedInMs = position.coords.speed || 0;
+                    const speedInKmh = speedInMs * 3.6;
+
+                    gpsSpeedElement.innerText = speedInKmh.toFixed(1);
+
+                    // Actualizamos el estado según la precisión
+                    const accuracy = position.coords.accuracy;
+                    if (accuracy < 10) {
+                        gpsStatusElement.innerText = `GPS: Excelente (${accuracy.toFixed(0)}m)`;
+                    } else if (accuracy < 20) {
+                        gpsStatusElement.innerText = `GPS: Bueno (${accuracy.toFixed(0)}m)`;
+                    } else {
+                        gpsStatusElement.innerText = `GPS: Regular (${accuracy.toFixed(0)}m)`;
+                    }
+
+                    // **RECALIBRACIÓN CLAVE:** Usamos la velocidad del GPS para corregir la calculada
+                    calculatedSpeed = speedInKmh;
+                },
+                (error) => {
+                    console.error("Error de GPS:", error);
+                    gpsStatusElement.innerText = `Error GPS: ${error.message}`;
+                },
+                options
+            );
+        } else {
+            gpsStatusElement.innerText = "GPS no disponible en este dispositivo.";
+        }
+
+        // --- LÓGICA PARA EL ACELERÓMETRO (usando la API de sensores del navegador) ---
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', (event) => {
+                const currentTime = Date.now();
+                const timeDiff = (currentTime - lastTimestamp) / 1000; // Diferencia en segundos
+
+                // IMPORTANTE: Esto depende de CÓMO sujetes el móvil.
+                // Asumimos que el móvil está en vertical (retrato) y el movimiento hacia adelante es en el eje Y.
+                // Si lo pones horizontal, probablemente sea el eje X. ¡Debes probar!
+                const acceleration = event.accelerationIncludingGravity;
+                const forwardAcceleration = acceleration.y;
+
+                // Calculamos el cambio de velocidad (v = v0 + a*t)
+                calculatedSpeed += forwardAcceleration * timeDiff * 3.6; // *3.6 para km/h
+
+                // Nos aseguramos de que la velocidad no sea negativa
+                if (calculatedSpeed < 0) {
+                    calculatedSpeed = 0;
+                }
+
+                accelSpeedElement.innerText = calculatedSpeed.toFixed(1);
+                lastTimestamp = currentTime;
+            });
+        } else {
+            alert("Lo siento, los sensores de movimiento no están disponibles en tu navegador.");
+        }
+    </script>
+
+</body>
+</html>
