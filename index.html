@@ -1,190 +1,272 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Velocidad Doble V1 - Web</title>
-    <style>
-        /* --- Estilos para que se vea bien en el celular --- */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Evita que aparezcan barras de desplazamiento */
-            background-color: #000000;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Control de Velocidad Doble - Moto</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Courier New', monospace;
+    }
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            user-select: none; /* Evita que se seleccione el texto al tocar */
-        }
+    body {
+      background: #0a0a12;
+      color: white;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      padding: 20px;
+    }
 
-        .gps-speed-label {
-            color: #00FF00; /* Verde brillante */
-            font-size: 24px;
-            font-weight: bold;
-        }
+    .tachometer {
+      width: 90vw;
+      max-width: 400px;
+      background: radial-gradient(circle, #1a1a2e 0%, #0d0d1a 100%);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 0 20px rgba(0, 200, 255, 0.3),
+                  inset 0 0 15px rgba(0, 0, 0, 0.8);
+      border: 2px solid #333;
+      position: relative;
+    }
 
-        .gps-speed {
-            color: #FFFFFF;
-            font-size: 80px;
-            font-weight: 300;
-            line-height: 1;
-        }
+    .tachometer::before {
+      content: "";
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      border-radius: 25px;
+      background: linear-gradient(135deg, #003366, #001122);
+      z-index: -1;
+    }
 
-        .accel-speed-label {
-            color: #FFA500; /* Naranja */
-            font-size: 24px;
-            font-weight: bold;
-        }
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #4fc3f7;
+      text-shadow: 0 0 8px rgba(79, 195, 247, 0.6);
+    }
 
-        .accel-speed {
-            color: #FFFFFF;
-            font-size: 60px;
-            font-weight: 300;
-            line-height: 1;
-        }
+    .speed-panel {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+    }
 
-        .unit {
-            color: #CCCCCC;
-            font-size: 20px;
-            margin-top: 5px;
-            margin-bottom: 20px;
-        }
+    .speed-box {
+      text-align: center;
+      flex: 1;
+      padding: 10px;
+    }
 
-        .divider {
-            height: 2px;
-            background-color: #333333;
-            width: 80%;
-            margin: 20px 0;
-            border: 0;
-        }
+    .label {
+      font-size: 14px;
+      margin-bottom: 8px;
+      opacity: 0.8;
+    }
 
-        .status {
-            color: #AAAAAA;
-            font-size: 16px;
-            position: absolute;
-            bottom: 40px;
-        }
+    .gps .label {
+      color: #4caf50;
+    }
 
-        .error {
-            color: #FF4136; /* Rojo para errores */
-            font-size: 18px;
-            padding: 20px;
-            text-align: center;
-        }
-    </style>
+    .sensor .label {
+      color: #29b6f6;
+    }
+
+    .speed-value {
+      font-size: 56px;
+      font-weight: bold;
+      line-height: 1;
+      text-shadow: 0 0 10px currentColor;
+      font-family: 'Courier New', monospace;
+    }
+
+    .gps .speed-value {
+      color: #66bb6a;
+    }
+
+    .sensor .speed-value {
+      color: #4fc3f7;
+    }
+
+    .delta {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 16px;
+      color: #ffcc00;
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+
+    .unit {
+      font-size: 18px;
+      position: absolute;
+      right: 25px;
+      top: 45px;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- Velocidad GPS -->
-        <div class="gps-section">
-            <p class="gps-speed-label">GPS</p>
-            <p class="gps-speed" id="gps-speed">0.0</p>
-            <p class="unit">KM/H</p>
-        </div>
-
-        <hr class="divider">
-
-        <!-- Velocidad por Acelerómetro -->
-        <div class="accel-section">
-            <p class="accel-speed-label">CALCULADA</p>
-            <p class="accel-speed" id="accel-speed">0.0</p>
-            <p class="unit">KM/H</p>
-        </div>
-        
-        <!-- Indicador de estado del GPS -->
-        <p class="status" id="gps-status">Solicitando permisos...</p>
+<div class="tachometer">
+  <h1>CONTROL DE VELOCIDAD DOBLE v1</h1>
+  
+  <div class="speed-panel">
+    <div class="speed-box gps">
+      <div class="label">GPS (Satélite)</div>
+      <div class="speed-value" id="gpsSpeed">--</div>
     </div>
+    <div class="speed-box sensor">
+      <div class="label">Sensor (Inercial)</div>
+      <div class="speed-value" id="sensorSpeed">--</div>
+    </div>
+  </div>
 
-    <script>
-        // --- Referencias a los elementos de la página ---
-        const gpsSpeedElement = document.getElementById('gps-speed');
-        const accelSpeedElement = document.getElementById('accel-speed');
-        const gpsStatusElement = document.getElementById('gps-status');
+  <div class="delta" id="delta">Δ = -- km/h</div>
 
-        // --- Variables para el cálculo ---
-        let calculatedSpeed = 0;
-        let lastTimestamp = Date.now();
+  <div class="status">
+    <span id="gpsStatus">📡 Esperando GPS</span>
+    <span id="sensorStatus">🧭 Sensores activos</span>
+  </div>
 
-        // --- LÓGICA PARA EL GPS (usando la API del navegador) ---
-        if ('geolocation' in navigator) {
-            // Opciones de alta precisión para el GPS
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            };
+  <div class="unit">km/h</div>
+</div>
 
-            // watchPosition llama a la función de éxito cada vez que hay una nueva lectura
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    // La velocidad viene en metros/segundo. La convertimos a km/h
-                    // position.coords.speed puede ser null si estás quieto
-                    const speedInMs = position.coords.speed || 0;
-                    const speedInKmh = speedInMs * 3.6;
+<script>
+  // Elementos del DOM
+  const gpsSpeedEl = document.getElementById('gpsSpeed');
+  const sensorSpeedEl = document.getElementById('sensorSpeed');
+  const deltaEl = document.getElementById('delta');
+  const gpsStatusEl = document.getElementById('gpsStatus');
+  const sensorStatusEl = document.getElementById('sensorStatus');
 
-                    gpsSpeedElement.innerText = speedInKmh.toFixed(1);
+  // Variables para velocidad
+  let gpsSpeed = 0; // en km/h
+  let sensorSpeed = 0; // estimado en km/h
+  let lastTime = 0;
+  let lastVelocity = 0; // para integración del acelerómetro
 
-                    // Actualizamos el estado según la precisión
-                    const accuracy = position.coords.accuracy;
-                    if (accuracy < 10) {
-                        gpsStatusElement.innerText = `GPS: Excelente (${accuracy.toFixed(0)}m)`;
-                    } else if (accuracy < 20) {
-                        gpsStatusElement.innerText = `GPS: Bueno (${accuracy.toFixed(0)}m)`;
-                    } else {
-                        gpsStatusElement.innerText = `GPS: Regular (${accuracy.toFixed(0)}m)`;
-                    }
+  // === GPS ===
+  if ("geolocation" in navigator) {
+    navigator.geolocation.watchPosition(
+      (position) => {
+        gpsSpeed = position.coords.speed ? Math.round(position.coords.speed * 3.6) : 0;
+        gpsSpeedEl.textContent = gpsSpeed;
+        gpsStatusEl.textContent = "📡 GPS OK";
+        updateDelta();
+      },
+      (error) => {
+        gpsStatusEl.textContent = "📡 Sin señal";
+        gpsSpeed = 0;
+        gpsSpeedEl.textContent = "--";
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    gpsStatusEl.textContent = "📡 No soportado";
+  }
 
-                    // **RECALIBRACIÓN CLAVE:** Usamos la velocidad del GPS para corregir la calculada
-                    calculatedSpeed = speedInKmh;
-                },
-                (error) => {
-                    console.error("Error de GPS:", error);
-                    gpsStatusElement.innerText = `Error GPS: ${error.message}`;
-                },
-                options
-            );
-        } else {
-            gpsStatusElement.innerText = "GPS no disponible en este dispositivo.";
+  // === Sensores Inerciales (Acelerómetro + Giroscopio) ===
+  let accelerationX = 0, accelerationY = 0, accelerationZ = 0;
+  let gravity = [0, 0, 9.81]; // estimación inicial de gravedad
+
+  // Filtro para separar gravedad de aceleración lineal (filtro complementario simple)
+  const alpha = 0.8;
+
+  window.addEventListener('deviceorientation', (event) => {
+    // Solo usamos acelerómetro si está disponible
+  });
+
+  if (typeof DeviceMotionEvent !== 'undefined' && 'requestPermission' in DeviceMotionEvent) {
+    // iOS 13+
+    DeviceMotionEvent.requestPermission()
+      .then(permissionState => {
+        if (permissionState === 'granted') {
+          window.addEventListener('devicemotion', handleMotion);
+          sensorStatusEl.textContent = "🧭 Sensores OK";
         }
+      })
+      .catch(console.error);
+  } else if (typeof DeviceMotionEvent !== 'undefined') {
+    // Android y otros
+    window.addEventListener('devicemotion', handleMotion);
+    sensorStatusEl.textContent = "🧭 Sensores OK";
+  } else {
+    sensorStatusEl.textContent = "🧭 No soportado";
+  }
 
-        // --- LÓGICA PARA EL ACELERÓMETRO (usando la API de sensores del navegador) ---
-        if (window.DeviceMotionEvent) {
-            window.addEventListener('devicemotion', (event) => {
-                const currentTime = Date.now();
-                const timeDiff = (currentTime - lastTimestamp) / 1000; // Diferencia en segundos
+  function handleMotion(event) {
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
 
-                // IMPORTANTE: Esto depende de CÓMO sujetes el móvil.
-                // Asumimos que el móvil está en vertical (retrato) y el movimiento hacia adelante es en el eje Y.
-                // Si lo pones horizontal, probablemente sea el eje X. ¡Debes probar!
-                const acceleration = event.accelerationIncludingGravity;
-                const forwardAcceleration = acceleration.y;
+    // Estimación simple de gravedad (promedio móvil)
+    gravity[0] = alpha * gravity[0] + (1 - alpha) * acc.x;
+    gravity[1] = alpha * gravity[1] + (1 - alpha) * acc.y;
+    gravity[2] = alpha * gravity[2] + (1 - alpha) * acc.z;
 
-                // Calculamos el cambio de velocidad (v = v0 + a*t)
-                calculatedSpeed += forwardAcceleration * timeDiff * 3.6; // *3.6 para km/h
+    // Aceleración lineal (sin gravedad)
+    const linearAccX = acc.x - gravity[0];
+    const linearAccY = acc.y - gravity[1];
+    const linearAccZ = acc.z - gravity[2];
 
-                // Nos aseguramos de que la velocidad no sea negativa
-                if (calculatedSpeed < 0) {
-                    calculatedSpeed = 0;
-                }
+    // Proyectamos en dirección de movimiento (simplificamos a eje X)
+    const linearAcc = linearAccX;
 
-                accelSpeedElement.innerText = calculatedSpeed.toFixed(1);
-                lastTimestamp = currentTime;
-            });
-        } else {
-            alert("Lo siento, los sensores de movimiento no están disponibles en tu navegador.");
-        }
-    </script>
+    // Integración para velocidad (m/s)
+    const now = performance.now();
+    if (lastTime === 0) {
+      lastTime = now;
+      return;
+    }
+    const dt = (now - lastTime) / 1000; // segundos
+    lastVelocity += linearAcc * dt; // v = v0 + a*t
+
+    // Pequeño decaimiento para evitar deriva infinita
+    lastVelocity *= 0.98;
+
+    // Convertir a km/h y limitar ruido
+    sensorSpeed = Math.abs(lastVelocity * 3.6);
+    if (sensorSpeed < 2) sensorSpeed = 0; // ruido bajo
+    sensorSpeed = Math.round(sensorSpeed);
+
+    sensorSpeedEl.textContent = sensorSpeed;
+    lastTime = now;
+    updateDelta();
+  }
+
+  function updateDelta() {
+    const diff = Math.abs(gpsSpeed - sensorSpeed);
+    deltaEl.textContent = `Δ = ${diff} km/h`;
+  }
+
+  // Fallback: si no hay sensores, usar GPS en ambos (solo para visualización)
+  setInterval(() => {
+    if (sensorSpeedEl.textContent === "--" && gpsSpeedEl.textContent !== "--") {
+      sensorSpeedEl.textContent = gpsSpeedEl.textContent;
+      deltaEl.textContent = "Δ = 0 km/h";
+    }
+  }, 2000);
+</script>
 
 </body>
 </html>
